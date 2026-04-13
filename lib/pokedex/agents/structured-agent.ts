@@ -1,19 +1,12 @@
 import { fetchPokemonByName } from "@/lib/pokedex/clients/pokeapi";
-import type { StructuredPokemonData } from "@/lib/types";
+import type { QueryAnalysis, StructuredPokemonData } from "@/lib/types";
 
-const knownPokemon = ["pikachu", "gengar", "mewtwo", "treecko", "gardevoir", "luvdisc"];
-
-export function detectPokemonEntities(query: string): string[] {
-  const normalized = query.toLowerCase();
-  return knownPokemon.filter((pokemon) => normalized.includes(pokemon));
-}
-
-export async function getStructuredContext(query: string): Promise<StructuredPokemonData | null> {
-  const [firstEntity] = detectPokemonEntities(query);
-
-  if (!firstEntity) {
+export async function getStructuredContext(
+  analysis: QueryAnalysis
+): Promise<StructuredPokemonData | null> {
+  if (!analysis.candidatePokemonName) {
     return null;
   }
 
-  return fetchPokemonByName(firstEntity);
+  return fetchPokemonByName(analysis.candidatePokemonName);
 }

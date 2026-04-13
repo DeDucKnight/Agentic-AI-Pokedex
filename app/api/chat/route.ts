@@ -17,6 +17,6 @@ export async function POST(request: Request) {
     const message =
       error instanceof Error ? error.message : "Unexpected server error.";
 
-    return NextResponse.json({ error: message }, { status: 400 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

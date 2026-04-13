@@ -1,11 +1,13 @@
-import type { QueryIntent, ReasoningTrace, RouteDecision } from "@/lib/types";
+import type { QueryAnalysis, ReasoningTrace, RouteDecision } from "@/lib/types";
 
 export function buildTrace(input: {
-  intent: QueryIntent;
-  entitiesDetected: string[];
+  analysis: QueryAnalysis;
   selectedRoute: RouteDecision;
+  fallbacksUsed: string[];
+  structuredFound: boolean;
+  loreFound: boolean;
 }): ReasoningTrace {
-  const { intent, entitiesDetected, selectedRoute } = input;
+  const { analysis, selectedRoute, fallbacksUsed, structuredFound, loreFound } = input;
 
   const whyThisRoute =
     selectedRoute === "pokeapi"
@@ -15,11 +17,18 @@ export function buildTrace(input: {
         : "The query mixes factual lookup with explanation or recommendation, so both sources are needed.";
 
   return {
-    intent,
-    entitiesDetected,
+    intent: analysis.intent,
+    entitiesDetected: analysis.entitiesDetected,
     selectedRoute,
     whyThisRoute,
-    confidence: selectedRoute === "hybrid" ? 0.78 : 0.86,
-    fallbacksUsed: entitiesDetected.length === 0 ? ["No direct Pokemon entity detected."] : []
+    confidence:
+      selectedRoute === "hybrid"
+        ? structuredFound && loreFound
+          ? 0.9
+          : 0.72
+        : structuredFound || loreFound
+          ? 0.85
+          : 0.48,
+    fallbacksUsed
   };
 }

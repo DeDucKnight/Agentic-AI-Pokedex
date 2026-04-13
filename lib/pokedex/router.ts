@@ -1,12 +1,17 @@
-import { classifyIntent } from "@/lib/pokedex/agents/classifier";
+import { analyzeQuery } from "@/lib/pokedex/agents/classifier";
 import { getLoreContext } from "@/lib/pokedex/agents/lore-agent";
-import { detectPokemonEntities, getStructuredContext } from "@/lib/pokedex/agents/structured-agent";
+import { getStructuredContext } from "@/lib/pokedex/agents/structured-agent";
 import { synthesizeAnswer } from "@/lib/pokedex/agents/synthesizer";
+import { fetchPokemonByName } from "@/lib/pokedex/clients/pokeapi";
 import { buildTrace } from "@/lib/pokedex/trace";
-import type { ChatResponse, QueryIntent, RouteDecision } from "@/lib/types";
+import type { ChatResponse, QueryAnalysis, RouteDecision } from "@/lib/types";
 
-function decideRoute(intent: QueryIntent): RouteDecision {
-  switch (intent) {
+function decideRoute(analysis: QueryAnalysis): RouteDecision {
+  if (analysis.needsStructuredFacts && analysis.needsLore) {
+    return "hybrid";
+  }
+
+  switch (analysis.intent) {
     case "structured":
       return "pokeapi";
     case "lore":
@@ -20,26 +25,57 @@ function decideRoute(intent: QueryIntent): RouteDecision {
 }
 
 export async function runPokedexPipeline(query: string): Promise<ChatResponse> {
-  const intent = classifyIntent(query);
-  const entitiesDetected = detectPokemonEntities(query);
-  const selectedRoute = decideRoute(intent);
+  const analysis = analyzeQuery(query);
+  const selectedRoute = decideRoute(analysis);
 
-  const [structured, lore] = await Promise.all([
+  let [structured, lore] = await Promise.all([
     selectedRoute === "pokeapi" || selectedRoute === "hybrid"
-      ? getStructuredContext(query)
+      ? getStructuredContext(analysis)
       : Promise.resolve(null),
     selectedRoute === "bulbapedia" || selectedRoute === "hybrid"
-      ? getLoreContext(query)
+      ? getLoreContext(query, analysis)
       : Promise.resolve(null)
   ]);
 
+  const fallbacksUsed: string[] = [];
+
+  if (!structured && analysis.needsStructuredFacts && lore?.matches[0]?.title) {
+    const suggestedPokemon = lore.matches[0].title.toLowerCase().split(/\s+/)[0];
+    structured = await fetchPokemonByName(suggestedPokemon);
+
+    if (structured) {
+      fallbacksUsed.push(
+        `Used lore retrieval to infer "${structured.name}" as the best structured match.`
+      );
+    }
+  }
+
+  if (
+    analysis.candidatePokemonName &&
+    !structured &&
+    (analysis.needsStructuredFacts || selectedRoute === "hybrid")
+  ) {
+    fallbacksUsed.push(`PokeAPI returned no result for "${analysis.candidatePokemonName}".`);
+  }
+
+  if (!analysis.candidatePokemonName && analysis.needsStructuredFacts) {
+    fallbacksUsed.push("No direct Pokemon entity detected for structured lookup.");
+  }
+
+  if (!lore && (analysis.needsLore || selectedRoute === "bulbapedia")) {
+    fallbacksUsed.push("No Bulbapedia corpus match was found, so lore context is limited.");
+  }
+
   const trace = buildTrace({
-    intent,
-    entitiesDetected,
-    selectedRoute
+    analysis,
+    selectedRoute,
+    fallbacksUsed,
+    structuredFound: Boolean(structured),
+    loreFound: Boolean(lore)
   });
 
   return synthesizeAnswer({
+    analysis,
     structured,
     lore,
     trace
