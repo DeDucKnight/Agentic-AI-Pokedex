@@ -1,5 +1,5 @@
 import { env } from "@/lib/env";
-import { getOpenAIClient } from "@/lib/openai";
+import { getGeminiClient } from "@/lib/gemini";
 import type {
   ChatResponse,
   LoreResult,
@@ -66,18 +66,19 @@ async function tryModelSynthesis(input: {
   structured: StructuredPokemonData | null;
   lore: LoreResult | null;
 }) {
-  const client = getOpenAIClient();
+  const client = getGeminiClient();
 
   if (!client) {
     return null;
   }
 
   try {
-    const response = await client.responses.create({
-      model: env.OPENAI_MODEL,
-      input: [
+    const response = await client.models.generateContent({
+      model: env.GEMINI_MODEL,
+      contents: [
         "You are a source-aware Pokemon assistant.",
         "Use only the supplied context.",
+        "Do not invent unsupported Pokemon facts.",
         "Keep the answer concise but informative.",
         `Intent: ${input.analysis.intent}`,
         `User query: ${input.analysis.originalQuery}`,
@@ -86,7 +87,7 @@ async function tryModelSynthesis(input: {
       ].join("\n")
     });
 
-    return response.output_text.trim() || null;
+    return response.text?.trim() || null;
   } catch {
     return null;
   }

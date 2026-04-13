@@ -5,7 +5,7 @@ Source-aware Pokemon assistant built for the Leverate take-home challenge.
 ## Stack
 
 - Next.js 15 + TypeScript
-- OpenAI for routing and answer synthesis
+- Gemini for answer synthesis and embeddings
 - Supabase + pgvector for Bulbapedia embeddings
 - PokeAPI for structured Pokemon facts
 
@@ -27,10 +27,10 @@ npm run dev
 
 ## Env vars
 
-- `OPENAI_API_KEY`
-- `OPENAI_MODEL`
-- `OPENAI_CLASSIFIER_MODEL`
-- `OPENAI_EMBEDDING_MODEL`
+- `GEMINI_API_KEY`
+- `GEMINI_MODEL`
+- `GEMINI_EMBEDDING_MODEL`
+- `GEMINI_EMBEDDING_DIMENSION`
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`

@@ -1,5 +1,5 @@
 import { env } from "@/lib/env";
-import { getOpenAIClient } from "@/lib/openai";
+import { getGeminiClient } from "@/lib/gemini";
 import { localLoreCorpus } from "@/lib/pokedex/knowledge/local-corpus";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import type { LoreResult, QueryAnalysis } from "@/lib/types";
@@ -19,20 +19,39 @@ function scoreDocument(text: string, query: string, descriptors: string[]) {
   return tokenScore + descriptorScore;
 }
 
+function normalizeVector(values: number[]) {
+  const magnitude = Math.sqrt(values.reduce((sum, value) => sum + value * value, 0));
+
+  if (!Number.isFinite(magnitude) || magnitude === 0) {
+    return values;
+  }
+
+  return values.map((value) => value / magnitude);
+}
+
 async function embedQuery(query: string) {
-  const client = getOpenAIClient();
+  const client = getGeminiClient();
 
   if (!client) {
     return null;
   }
 
   try {
-    const response = await client.embeddings.create({
-      model: env.OPENAI_EMBEDDING_MODEL,
-      input: query
+    const response = await client.models.embedContent({
+      model: env.GEMINI_EMBEDDING_MODEL,
+      contents: `task: search result | query: ${query}`,
+      config: {
+        outputDimensionality: env.GEMINI_EMBEDDING_DIMENSION
+      }
     });
 
-    return response.data[0]?.embedding ?? null;
+    const values = response.embeddings?.[0]?.values;
+
+    if (!values || values.length !== env.GEMINI_EMBEDDING_DIMENSION) {
+      return null;
+    }
+
+    return normalizeVector(values);
   } catch {
     return null;
   }
