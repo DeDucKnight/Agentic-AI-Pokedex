@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test:gemini": "node --import tsx --test tests/gemini.test.ts",
     "typecheck": "tsc --noEmit",
     "ingest:bulbapedia": "tsx scripts/ingest-bulbapedia.ts"
   },
