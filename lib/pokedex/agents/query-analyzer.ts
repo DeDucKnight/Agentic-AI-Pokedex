@@ -1,21 +1,5 @@
+import { resolvePokemonName } from "@/lib/pokedex/agents/pokemon-name-resolver-v2";
 import type { QueryAnalysis, QueryIntent } from "@/lib/types";
-
-const knownPokemon = [
-  "bulbasaur",
-  "charmander",
-  "squirtle",
-  "pikachu",
-  "gengar",
-  "mewtwo",
-  "treecko",
-  "grovyle",
-  "sceptile",
-  "torchic",
-  "mudkip",
-  "gardevoir",
-  "luvdisc",
-  "yveltal"
-];
 
 const structuredPatterns = [
   /\bbase stats?\b/i,
@@ -86,63 +70,27 @@ function classifyIntent(query: string): QueryIntent {
   return "unknown";
 }
 
-function detectPokemonEntities(query: string) {
-  const normalized = query.toLowerCase();
-  return knownPokemon.filter((pokemon) => normalized.includes(pokemon));
-}
-
-function extractCandidatePokemonName(query: string, entitiesDetected: string[]) {
-  if (entitiesDetected.length > 0) {
-    return entitiesDetected[0];
-  }
-
-  const explicitCalledMatch = query.match(/\bcalled\s+([a-z-]+)\b/i);
-
-  if (explicitCalledMatch) {
-    return explicitCalledMatch[1].toLowerCase();
-  }
-
-  const aboutMatch = query.match(/\babout\s+(?:the\s+pokemon\s+)?([a-z-]+)\b/i);
-
-  if (aboutMatch && aboutMatch[1].toLowerCase() !== "the") {
-    return aboutMatch[1].toLowerCase();
-  }
-
-  const forMatch = query.match(/\bfor\s+([a-z-]+)\b/i);
-  return forMatch ? forMatch[1].toLowerCase() : null;
-}
-
-function extractRawPokemonMention(query: string) {
-  const explicitCalledMatch = query.match(/\bcalled\s+([a-z-]+)\b/i);
-
-  if (explicitCalledMatch) {
-    return explicitCalledMatch[1].toLowerCase();
-  }
-
-  const aboutMatch = query.match(/\babout\s+(?:the\s+pokemon\s+)?([a-z-]+)\b/i);
-  return aboutMatch ? aboutMatch[1].toLowerCase() : null;
-}
-
 function extractDescriptors(query: string) {
   const normalized = query.toLowerCase();
   return descriptorTerms.filter((term) => normalized.includes(term));
 }
 
-export function analyzeQuery(query: string): QueryAnalysis {
+export async function analyzeQuery(query: string): Promise<QueryAnalysis> {
   const normalizedQuery = query.trim().replace(/\s+/g, " ");
-  const entitiesDetected = detectPokemonEntities(normalizedQuery);
   const intent = classifyIntent(normalizedQuery);
   const descriptors = extractDescriptors(normalizedQuery);
-  const rawPokemonMention = extractRawPokemonMention(normalizedQuery);
-  const candidatePokemonName = extractCandidatePokemonName(normalizedQuery, entitiesDetected);
+  const resolution = await resolvePokemonName(normalizedQuery);
 
   return {
     originalQuery: query,
     normalizedQuery,
     intent,
-    entitiesDetected,
-    rawPokemonMention,
-    candidatePokemonName,
+    entitiesDetected: resolution.entitiesDetected,
+    rawPokemonMention: resolution.rawPokemonMention,
+    candidatePokemonName: resolution.candidatePokemonName,
+    resolvedPokemonName: resolution.resolvedPokemonName,
+    resolutionConfidence: resolution.resolutionConfidence,
+    alternativeMatches: resolution.alternativeMatches,
     descriptors,
     needsStructuredFacts:
       intent === "structured" || intent === "recommendation" || /\bevolution\b/i.test(query),

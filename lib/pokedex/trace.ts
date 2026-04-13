@@ -21,6 +21,9 @@ export function buildTrace(input: {
     entitiesDetected: analysis.entitiesDetected,
     selectedRoute,
     whyThisRoute,
+    resolvedPokemonName: analysis.resolvedPokemonName,
+    nameResolutionConfidence: analysis.resolutionConfidence,
+    alternativeMatches: analysis.alternativeMatches,
     confidence:
       selectedRoute === "hybrid"
         ? structuredFound && loreFound

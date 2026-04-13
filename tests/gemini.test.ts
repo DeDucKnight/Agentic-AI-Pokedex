@@ -72,3 +72,63 @@ test('Pipeline returns an answer for "What are Gengar\'s base stats?"', async ()
   assert.ok(result.trace, "Pipeline should return a reasoning trace.");
   assert.equal(result.trace.selectedRoute, "pokeapi");
 });
+
+test('Query analysis resolves "what is dragapults stats" to dragapult', async () => {
+  const originalFetch = global.fetch;
+
+  global.fetch = (async (input: string | URL | Request) => {
+    const url = String(input);
+
+    if (url.includes("/pokemon/dragapult")) {
+      return new Response(
+        JSON.stringify({
+          id: 887,
+          name: "dragapult",
+          height: 30,
+          weight: 500,
+          types: [],
+          abilities: [],
+          stats: []
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    return new Response("Not found", { status: 404 });
+  }) as typeof fetch;
+
+  try {
+    const [{ analyzeQuery }] = await Promise.all([
+      import("@/lib/pokedex/agents/query-analyzer")
+    ]);
+
+    const analysis = await analyzeQuery("what is dragapults stats");
+
+    assert.equal(analysis.resolvedPokemonName, "dragapult");
+    assert.equal(analysis.intent, "structured");
+    assert.ok(
+      analysis.resolutionConfidence > 0.9,
+      "Expected high confidence resolution for normalized direct match."
+    );
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test('Pipeline returns a fallback answer for "Tell me about Dragapult"', async () => {
+  const [{ runPokedexPipeline }] = await Promise.all([
+    import("@/lib/pokedex/router")
+  ]);
+
+  const result = await runPokedexPipeline("Tell me about Dragapult");
+
+  assert.ok(result.answer.trim().length > 0, "Pipeline should return a non-empty answer.");
+  assert.ok(
+    result.trace.resolvedPokemonName === "dragapult",
+    "The pipeline should resolve Dragapult correctly."
+  );
+  assert.ok(
+    result.sources.includes("PokeAPI"),
+    "The pipeline should fall back to PokeAPI when lore retrieval is unavailable."
+  );
+});

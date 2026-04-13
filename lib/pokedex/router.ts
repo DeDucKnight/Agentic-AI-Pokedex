@@ -15,6 +15,7 @@ function decideRoute(analysis: QueryAnalysis): RouteDecision {
     case "structured":
       return "pokeapi";
     case "lore":
+      return analysis.resolvedPokemonName ? "hybrid" : "bulbapedia";
     case "fuzzy":
       return "bulbapedia";
     case "recommendation":
@@ -25,7 +26,7 @@ function decideRoute(analysis: QueryAnalysis): RouteDecision {
 }
 
 export async function runPokedexPipeline(query: string): Promise<ChatResponse> {
-  const analysis = analyzeQuery(query);
+  const analysis = await analyzeQuery(query);
   const selectedRoute = decideRoute(analysis);
 
   let [structured, lore] = await Promise.all([
@@ -50,16 +51,37 @@ export async function runPokedexPipeline(query: string): Promise<ChatResponse> {
     }
   }
 
+  if (!structured && !lore && analysis.resolvedPokemonName && selectedRoute === "bulbapedia") {
+    structured = await fetchPokemonByName(analysis.resolvedPokemonName);
+
+    if (structured) {
+      fallbacksUsed.push(
+        `Used PokeAPI fallback for "${analysis.resolvedPokemonName}" because lore retrieval returned no match.`
+      );
+    }
+  }
+
   if (
     analysis.candidatePokemonName &&
     !structured &&
     (analysis.needsStructuredFacts || selectedRoute === "hybrid")
   ) {
-    fallbacksUsed.push(`PokeAPI returned no result for "${analysis.candidatePokemonName}".`);
+    const unresolvedName = analysis.resolvedPokemonName ?? analysis.candidatePokemonName;
+    fallbacksUsed.push(`PokeAPI returned no result for "${unresolvedName}".`);
   }
 
-  if (!analysis.candidatePokemonName && analysis.needsStructuredFacts) {
-    fallbacksUsed.push("No direct Pokemon entity detected for structured lookup.");
+  if (!analysis.resolvedPokemonName && analysis.needsStructuredFacts) {
+    fallbacksUsed.push("No confident Pokemon name was resolved for structured lookup.");
+  }
+
+  if (
+    analysis.resolvedPokemonName &&
+    analysis.candidatePokemonName &&
+    analysis.resolvedPokemonName !== analysis.candidatePokemonName
+  ) {
+    fallbacksUsed.push(
+      `Resolved "${analysis.candidatePokemonName}" to "${analysis.resolvedPokemonName}" before retrieval.`
+    );
   }
 
   if (!lore && (analysis.needsLore || selectedRoute === "bulbapedia")) {

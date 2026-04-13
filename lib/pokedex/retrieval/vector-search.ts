@@ -1,5 +1,5 @@
 import { env } from "@/lib/env";
-import { getGeminiClient } from "@/lib/gemini";
+import { embedText } from "@/lib/pokedex/embeddings";
 import { localLoreCorpus } from "@/lib/pokedex/knowledge/local-corpus";
 import { getSupabaseAdminClient } from "@/lib/supabase";
 import type { LoreResult, QueryAnalysis } from "@/lib/types";
@@ -19,42 +19,8 @@ function scoreDocument(text: string, query: string, descriptors: string[]) {
   return tokenScore + descriptorScore;
 }
 
-function normalizeVector(values: number[]) {
-  const magnitude = Math.sqrt(values.reduce((sum, value) => sum + value * value, 0));
-
-  if (!Number.isFinite(magnitude) || magnitude === 0) {
-    return values;
-  }
-
-  return values.map((value) => value / magnitude);
-}
-
 async function embedQuery(query: string) {
-  const client = getGeminiClient();
-
-  if (!client) {
-    return null;
-  }
-
-  try {
-    const response = await client.models.embedContent({
-      model: env.GEMINI_EMBEDDING_MODEL,
-      contents: `task: search result | query: ${query}`,
-      config: {
-        outputDimensionality: env.GEMINI_EMBEDDING_DIMENSION
-      }
-    });
-
-    const values = response.embeddings?.[0]?.values;
-
-    if (!values || values.length !== env.GEMINI_EMBEDDING_DIMENSION) {
-      return null;
-    }
-
-    return normalizeVector(values);
-  } catch {
-    return null;
-  }
+  return embedText(`task: search result | query: ${query}`);
 }
 
 async function searchSupabaseLore(query: string) {
@@ -88,7 +54,11 @@ async function searchSupabaseLore(query: string) {
 
 function searchLocalLore(query: string, analysis: QueryAnalysis) {
   const constrainedEntity =
-    analysis.rawPokemonMention ?? analysis.candidatePokemonName ?? analysis.entitiesDetected[0] ?? null;
+    analysis.resolvedPokemonName ??
+    analysis.rawPokemonMention ??
+    analysis.candidatePokemonName ??
+    analysis.entitiesDetected[0] ??
+    null;
 
   return localLoreCorpus
     .map((doc) => ({
@@ -114,8 +84,10 @@ function searchLocalLore(query: string, analysis: QueryAnalysis) {
         return true;
       }
 
-      return analysis.candidatePokemonName
-        ? normalized.includes(analysis.candidatePokemonName)
+      return analysis.resolvedPokemonName
+        ? normalized.includes(analysis.resolvedPokemonName)
+        : analysis.candidatePokemonName
+          ? normalized.includes(analysis.candidatePokemonName)
         : false;
     })
     .sort((left, right) => right.score - left.score)

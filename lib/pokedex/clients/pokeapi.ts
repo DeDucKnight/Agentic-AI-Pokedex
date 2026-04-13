@@ -10,6 +10,10 @@ interface PokemonPayload {
   stats: Array<{ base_stat: number; stat: { name: string } }>;
 }
 
+interface NamedApiResourceListPayload {
+  results: Array<{ name: string }>;
+}
+
 interface SpeciesPayload {
   color: { name: string } | null;
   habitat: { name: string } | null;
@@ -46,6 +50,8 @@ async function fetchJson<T>(url: string): Promise<T | null> {
 
   return (await response.json()) as T;
 }
+
+let pokemonNameIndexPromise: Promise<string[]> | null = null;
 
 function extractFlavorText(species: SpeciesPayload) {
   const englishEntry = species.flavor_text_entries.find(
@@ -105,4 +111,32 @@ export async function fetchPokemonByName(name: string): Promise<StructuredPokemo
       value: entry.base_stat
     }))
   };
+}
+
+export async function fetchCanonicalPokemonName(name: string): Promise<string | null> {
+  const normalized = name.trim().toLowerCase();
+
+  if (!normalized) {
+    return null;
+  }
+
+  const pokemon = await fetchJson<PokemonPayload>(
+    `https://pokeapi.co/api/v2/pokemon/${normalized}`
+  );
+
+  return pokemon?.name ?? null;
+}
+
+export async function fetchPokemonNameIndex(): Promise<string[]> {
+  if (!pokemonNameIndexPromise) {
+    pokemonNameIndexPromise = (async () => {
+      const response = await fetchJson<NamedApiResourceListPayload>(
+        "https://pokeapi.co/api/v2/pokemon-species?limit=2000"
+      );
+
+      return response?.results.map((entry) => entry.name) ?? [];
+    })();
+  }
+
+  return pokemonNameIndexPromise;
 }

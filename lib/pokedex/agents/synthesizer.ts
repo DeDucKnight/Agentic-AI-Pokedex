@@ -111,9 +111,12 @@ export async function synthesizeAnswer(input: {
   }
 
   if (sources.length === 0) {
+    const unresolvedName =
+      analysis.rawPokemonMention ?? analysis.candidatePokemonName ?? analysis.resolvedPokemonName;
+
     return {
-      answer: analysis.rawPokemonMention
-        ? `I could not verify "${analysis.rawPokemonMention}" as a trustworthy Pokemon result from the available sources. Try the official Pokemon name or ask a broader lore or descriptive question.`
+      answer: unresolvedName
+        ? `I could not verify "${unresolvedName}" as a trustworthy Pokemon result from the available sources. Try the official Pokemon name or ask a broader lore or descriptive question.`
         : "I could not find enough trustworthy Pokemon context for that question yet. Try a specific Pokemon name, a lore question, or a descriptive prompt with more detail.",
       sources: [],
       trace

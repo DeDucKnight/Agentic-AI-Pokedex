@@ -30,6 +30,9 @@ const starterTrace = {
   selectedRoute: "hybrid",
   whyThisRoute: "Submit a question to inspect the assistant's source-selection trace.",
   confidence: 0,
+  resolvedPokemonName: null,
+  nameResolutionConfidence: 0,
+  alternativeMatches: [],
   fallbacksUsed: []
 } as const;
 
@@ -293,6 +296,10 @@ export function ChatShell() {
                 <TraceRow label="Intent" value={trace.intent} />
                 <TraceRow label="Route" value={trace.selectedRoute} />
                 <TraceRow
+                  label="Resolved Name"
+                  value={trace.resolvedPokemonName ?? "Unresolved"}
+                />
+                <TraceRow
                   label="Confidence"
                   value={`${Math.round(trace.confidence * 100)}%`}
                 />
@@ -325,6 +332,18 @@ export function ChatShell() {
                     <span className="text-sm text-[#c7bfb3]">No entity detected yet.</span>
                   )}
                 </div>
+              </div>
+
+              <div className="mt-4 rounded-[1.25rem] bg-white/6 p-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-[#efb497]">
+                  Name resolution
+                </p>
+                <p className="mt-2 text-sm text-[#dfd7ca]">
+                  {Math.round(trace.nameResolutionConfidence * 100)}% confidence
+                  {trace.alternativeMatches.length > 0
+                    ? ` with alternatives: ${trace.alternativeMatches.join(", ")}`
+                    : "."}
+                </p>
               </div>
 
               <div className="mt-4 rounded-[1.25rem] bg-white/6 p-4">

@@ -14,6 +14,9 @@ export interface ReasoningTrace {
   selectedRoute: RouteDecision;
   whyThisRoute: string;
   confidence: number;
+  resolvedPokemonName: string | null;
+  nameResolutionConfidence: number;
+  alternativeMatches: string[];
   fallbacksUsed: string[];
 }
 
@@ -30,6 +33,9 @@ export interface QueryAnalysis {
   entitiesDetected: string[];
   rawPokemonMention: string | null;
   candidatePokemonName: string | null;
+  resolvedPokemonName: string | null;
+  resolutionConfidence: number;
+  alternativeMatches: string[];
   descriptors: string[];
   needsStructuredFacts: boolean;
   needsLore: boolean;
