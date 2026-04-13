@@ -343,16 +343,6 @@ export function ChatShell() {
               </div>
             </section>
 
-            <section className="rounded-[2rem] border border-[var(--border)] bg-white/76 p-5 shadow-[0_18px_60px_rgba(48,32,18,0.08)]">
-              <p className="text-xs uppercase tracking-[0.28em] text-[var(--accent-strong)]">
-                Scope Reminder
-              </p>
-              <ul className="mt-4 space-y-3 text-sm leading-7 text-[var(--muted)]">
-                <li>Supports structured facts, lore, fuzzy search, and recommendations.</li>
-                <li>Shows explicit routing instead of pretending to know everything from one source.</li>
-                <li>Keeps the experience single-turn and lightweight for the assessment.</li>
-              </ul>
-            </section>
           </aside>
         </section>
       </div>
