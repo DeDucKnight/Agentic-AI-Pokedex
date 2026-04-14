@@ -103,6 +103,13 @@ async function main() {
       writtenChunks += embeddedRows.length;
       console.log(`${page.title}: ${embeddedRows.length} chunk(s) ready`);
     } catch (error) {
+      console.error("[ingest-bulbapedia] page failed", {
+        page: page.title,
+        slug: page.slug,
+        error,
+        message: error instanceof Error ? error.message : "Unknown ingestion error"
+      });
+
       failures.push(
         `${page.title}: ${error instanceof Error ? error.message : "Unknown ingestion error"}`
       );

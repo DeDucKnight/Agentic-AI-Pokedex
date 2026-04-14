@@ -34,7 +34,13 @@ export async function embedText(text: string) {
     }
 
     return normalizeVector(values);
-  } catch {
+  } catch (error) {
+    console.error("[embeddings] embedText failed", {
+      textPreview: text.slice(0, 120),
+      error,
+      message: error instanceof Error ? error.message : "Unknown error"
+    });
+
     return null;
   }
 }

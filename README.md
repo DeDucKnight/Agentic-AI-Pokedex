@@ -37,5 +37,6 @@ npm run dev
 
 ## Notes
 
-- `scripts/ingest-bulbapedia.ts` is the future ingestion entrypoint for scraped pages.
+- `scripts/ingest-bulbapedia.ts` is the curated Bulbapedia ingestion entrypoint for scraped pages.
+- `data/bulbapedia/seed-pages.json` defines the hand-picked corpus for ingestion and retrieval coverage.
 - `supabase/migrations/001_create_documents.sql` contains the base vector schema.

@@ -7,19 +7,20 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test:gemini": "node --import tsx --test tests/gemini.test.ts",
+    "test:gemini": "node --import tsx --test tests/agents.test.ts",
     "test:ingestion": "node --import tsx --test tests/bulbapedia-ingestion.test.ts",
     "typecheck": "tsc --noEmit",
     "ingest:bulbapedia": "tsx scripts/ingest-bulbapedia.ts"
   },
   "dependencies": {
-    "@google/genai": "^1.16.0",
+    "@google/genai": "^1.49.0",
     "@supabase/supabase-js": "^2.49.8",
     "cheerio": "^1.1.0",
     "next": "^15.3.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "zod": "^3.24.4"
+    "zod": "^3.25.76",
+    "zod-to-json-schema": "^3.25.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.4",

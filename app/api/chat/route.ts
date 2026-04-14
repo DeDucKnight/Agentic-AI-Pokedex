@@ -14,6 +14,11 @@ export async function POST(request: Request) {
 
     return NextResponse.json(result);
   } catch (error) {
+    console.error("[api/chat] POST failed", {
+      error,
+      message: error instanceof Error ? error.message : "Unknown error"
+    });
+
     const message =
       error instanceof Error ? error.message : "Unexpected server error.";
 

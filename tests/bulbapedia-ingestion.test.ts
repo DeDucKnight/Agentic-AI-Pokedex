@@ -6,10 +6,18 @@ import {
   chunkParagraphs,
   extractBulbapediaParagraphs
 } from "@/lib/pokedex/ingestion";
+import { localLoreCorpus } from "@/lib/pokedex/knowledge/local-corpus";
 
 test("seed page list contains a curated corpus-sized set", () => {
-  assert.ok(seedPages.length >= 50, "Seed list should contain at least 50 pages.");
-  assert.ok(seedPages.length <= 100, "Seed list should contain at most 100 pages.");
+  assert.ok(seedPages.length >= 200, "Seed list should contain at least 200 pages.");
+});
+
+test("local fallback corpus stays aligned with the curated seed list", () => {
+  assert.equal(
+    localLoreCorpus.length,
+    seedPages.length,
+    "Local fallback lore should contain one entry per curated seed page."
+  );
 });
 
 test("chunk slug generation is deterministic", () => {

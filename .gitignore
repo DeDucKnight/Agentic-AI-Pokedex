@@ -8,3 +8,4 @@ dist
 tsconfig.tsbuildinfo
 *.log
 .DS_Store
+.vscode

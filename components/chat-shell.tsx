@@ -36,6 +36,18 @@ const starterTrace = {
   fallbacksUsed: []
 } as const;
 
+function normalizeTrace(trace: ChatResponse["trace"]): ChatResponse["trace"] {
+  return {
+    ...trace,
+    resolvedPokemonName:
+      trace.resolvedPokemonName ?? trace.pokemonName ?? null,
+    nameResolutionConfidence: trace.nameResolutionConfidence ?? 0,
+    alternativeMatches: trace.alternativeMatches ?? [],
+    fallbacksUsed: trace.fallbacksUsed ?? [],
+    entitiesDetected: trace.entitiesDetected ?? []
+  };
+}
+
 export function ChatShell() {
   const [query, setQuery] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -76,16 +88,17 @@ export function ChatShell() {
       }
 
       const payload = (await result.json()) as ChatResponse;
+      const trace = normalizeTrace(payload.trace);
       const assistantMessage: ChatMessage = {
         id: `assistant-${Date.now()}`,
         role: "assistant",
         content: payload.answer,
-        trace: payload.trace,
+        trace,
         sources: payload.sources
       };
 
       setMessages((current) => [...current, assistantMessage]);
-      setActiveTrace(payload.trace);
+      setActiveTrace(trace);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Something went wrong.");
     } finally {

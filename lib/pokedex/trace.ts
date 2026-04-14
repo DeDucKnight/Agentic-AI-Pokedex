@@ -3,11 +3,25 @@ import type { QueryAnalysis, ReasoningTrace, RouteDecision } from "@/lib/types";
 export function buildTrace(input: {
   analysis: QueryAnalysis;
   selectedRoute: RouteDecision;
+  sourcesCalled: ReasoningTrace["sourcesCalled"];
   fallbacksUsed: string[];
-  structuredFound: boolean;
+  statsFound: boolean;
   loreFound: boolean;
+  bulbapediaMeta?: {
+    questionIntent?: ReasoningTrace["bulbapediaQuestionIntent"];
+    topScore?: number | null;
+    accepted?: boolean;
+  };
 }): ReasoningTrace {
-  const { analysis, selectedRoute, fallbacksUsed, structuredFound, loreFound } = input;
+  const {
+    analysis,
+    selectedRoute,
+    sourcesCalled,
+    fallbacksUsed,
+    statsFound,
+    loreFound,
+    bulbapediaMeta
+  } = input;
 
   const whyThisRoute =
     selectedRoute === "pokeapi"
@@ -21,15 +35,25 @@ export function buildTrace(input: {
     entitiesDetected: analysis.entitiesDetected,
     selectedRoute,
     whyThisRoute,
-    resolvedPokemonName: analysis.resolvedPokemonName,
-    nameResolutionConfidence: analysis.resolutionConfidence,
-    alternativeMatches: analysis.alternativeMatches,
+    pokemonName: analysis.pokemonName,
+    resolvedPokemonName: analysis.resolvedPokemonName ?? analysis.pokemonName,
+    nameResolutionConfidence: analysis.resolutionConfidence ?? analysis.confidence,
+    alternativeMatches: analysis.alternativeMatches ?? [],
+    requestKind: analysis.requestKind,
+    queryMode: analysis.mode,
+    reasoningSummary: analysis.reasoningSummary,
+    sourcesCalled,
+    statsFound,
+    loreFound,
+    bulbapediaQuestionIntent: bulbapediaMeta?.questionIntent ?? null,
+    bulbapediaTopScore: bulbapediaMeta?.topScore ?? null,
+    bulbapediaAccepted: bulbapediaMeta?.accepted ?? false,
     confidence:
       selectedRoute === "hybrid"
-        ? structuredFound && loreFound
+        ? statsFound && loreFound
           ? 0.9
           : 0.72
-        : structuredFound || loreFound
+        : statsFound || loreFound
           ? 0.85
           : 0.48,
     fallbacksUsed

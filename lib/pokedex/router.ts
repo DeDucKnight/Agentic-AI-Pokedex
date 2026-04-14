@@ -1,105 +1,87 @@
-import { analyzeQuery } from "@/lib/pokedex/agents/classifier";
-import { getLoreContext } from "@/lib/pokedex/agents/lore-agent";
-import { getStructuredContext } from "@/lib/pokedex/agents/structured-agent";
-import { synthesizeAnswer } from "@/lib/pokedex/agents/synthesizer";
-import { fetchPokemonByName } from "@/lib/pokedex/clients/pokeapi";
+import {
+  buildAnalysisUnavailableResponse,
+  runAnswerCompilerAgent
+} from "@/lib/pokedex/agents/answer-compiler-agent";
+import { runBulbapediaAgent } from "@/lib/pokedex/agents/bulbapedia-agent";
+import { runPokeApiAgent } from "@/lib/pokedex/agents/pokeapi-agent";
+import { runQueryAnalyzerAgent } from "@/lib/pokedex/agents/query-analyzer-agent";
 import { buildTrace } from "@/lib/pokedex/trace";
-import type { ChatResponse, QueryAnalysis, RouteDecision } from "@/lib/types";
+import type {
+  QueryAnalysis,
+  RouteDecision,
+  SourceName
+} from "@/lib/types";
 
 function decideRoute(analysis: QueryAnalysis): RouteDecision {
-  if (analysis.needsStructuredFacts && analysis.needsLore) {
-    return "hybrid";
+  if (analysis.requestKind === "stats") {
+    return "pokeapi";
   }
 
-  switch (analysis.intent) {
-    case "structured":
-      return "pokeapi";
-    case "lore":
-      return analysis.resolvedPokemonName ? "hybrid" : "bulbapedia";
-    case "fuzzy":
-      return "bulbapedia";
-    case "recommendation":
-    case "unknown":
-    default:
-      return "hybrid";
-  }
+  return analysis.requestKind === "lore" ? "bulbapedia" : "hybrid";
 }
 
-export async function runPokedexPipeline(query: string): Promise<ChatResponse> {
-  const analysis = await analyzeQuery(query);
+export async function runPokedexPipeline(query: string) {
+  const analysis = await runQueryAnalyzerAgent(query);
+
+  if (!analysis) {
+    return buildAnalysisUnavailableResponse(query);
+  }
+
   const selectedRoute = decideRoute(analysis);
-
-  let [structured, lore] = await Promise.all([
-    selectedRoute === "pokeapi" || selectedRoute === "hybrid"
-      ? getStructuredContext(analysis)
-      : Promise.resolve(null),
-    selectedRoute === "bulbapedia" || selectedRoute === "hybrid"
-      ? getLoreContext(query, analysis)
-      : Promise.resolve(null)
-  ]);
-
+  const sourcesCalled: SourceName[] = [];
   const fallbacksUsed: string[] = [];
 
-  if (!structured && analysis.needsStructuredFacts && lore?.matches[0]?.title) {
-    const suggestedPokemon = lore.matches[0].title.toLowerCase().split(/\s+/)[0];
-    structured = await fetchPokemonByName(suggestedPokemon);
-
-    if (structured) {
-      fallbacksUsed.push(
-        `Used lore retrieval to infer "${structured.name}" as the best structured match.`
-      );
-    }
+  const pokeApi =
+    selectedRoute === "pokeapi" || selectedRoute === "hybrid"
+      ? await runPokeApiAgent(analysis.pokemonName)
+      : null;
+  if (pokeApi) {
+    sourcesCalled.push("PokeAPI");
   }
 
-  if (!structured && !lore && analysis.resolvedPokemonName && selectedRoute === "bulbapedia") {
-    structured = await fetchPokemonByName(analysis.resolvedPokemonName);
-
-    if (structured) {
-      fallbacksUsed.push(
-        `Used PokeAPI fallback for "${analysis.resolvedPokemonName}" because lore retrieval returned no match.`
-      );
-    }
+  const bulbapedia =
+    selectedRoute === "bulbapedia" || selectedRoute === "hybrid"
+      ? await runBulbapediaAgent(query)
+      : null;
+  if (bulbapedia) {
+    sourcesCalled.push("Bulbapedia corpus");
   }
 
-  if (
-    analysis.candidatePokemonName &&
-    !structured &&
-    (analysis.needsStructuredFacts || selectedRoute === "hybrid")
-  ) {
-    const unresolvedName = analysis.resolvedPokemonName ?? analysis.candidatePokemonName;
-    fallbacksUsed.push(`PokeAPI returned no result for "${unresolvedName}".`);
+  if (pokeApi && !pokeApi.found && pokeApi.error) {
+    fallbacksUsed.push(pokeApi.error);
   }
 
-  if (!analysis.resolvedPokemonName && analysis.needsStructuredFacts) {
-    fallbacksUsed.push("No confident Pokemon name was resolved for structured lookup.");
+  if (bulbapedia && !bulbapedia.found && bulbapedia.error) {
+    fallbacksUsed.push(bulbapedia.error);
   }
 
-  if (
-    analysis.resolvedPokemonName &&
-    analysis.candidatePokemonName &&
-    analysis.resolvedPokemonName !== analysis.candidatePokemonName
-  ) {
-    fallbacksUsed.push(
-      `Resolved "${analysis.candidatePokemonName}" to "${analysis.resolvedPokemonName}" before retrieval.`
-    );
+  if (selectedRoute !== "pokeapi" && !bulbapedia) {
+    fallbacksUsed.push("BulbapediaAgent was unavailable.");
   }
 
-  if (!lore && (analysis.needsLore || selectedRoute === "bulbapedia")) {
-    fallbacksUsed.push("No Bulbapedia corpus match was found, so lore context is limited.");
+  if (selectedRoute !== "bulbapedia" && !pokeApi) {
+    fallbacksUsed.push("PokeAPIAgent was unavailable.");
   }
 
   const trace = buildTrace({
     analysis,
     selectedRoute,
+    sourcesCalled,
     fallbacksUsed,
-    structuredFound: Boolean(structured),
-    loreFound: Boolean(lore)
+    statsFound: Boolean(pokeApi?.found),
+    loreFound: Boolean(bulbapedia?.found),
+    bulbapediaMeta: {
+      questionIntent: bulbapedia?.retrievalPlan?.questionIntent ?? null,
+      topScore: bulbapedia?.topScore ?? null,
+      accepted: bulbapedia?.accepted ?? false
+    }
   });
 
-  return synthesizeAnswer({
+  return runAnswerCompilerAgent({
+    question: query,
     analysis,
-    structured,
-    lore,
+    pokeApi,
+    bulbapedia,
     trace
   });
 }
