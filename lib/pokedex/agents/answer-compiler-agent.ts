@@ -46,7 +46,7 @@ export async function runAnswerCompilerAgent(
 
   try {
     const response = await client.models.generateContent({
-      model: env.GEMINI_MODEL,
+      model: env.GEMINI_ANSWER_COMPILER_MODEL,
       contents: [
         "You are AnswerCompilerAgent for a Pokemon assistant.",
         "Write the final answer for the user in a kind, friendly, grounded tone.",

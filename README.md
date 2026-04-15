@@ -29,9 +29,15 @@ Create a `.env.local` file based on `.env.example` and add your Gemini API key.
 ## Env vars
 
 - `GEMINI_API_KEY`
-- `GEMINI_MODEL`
+- `GEMINI_QUERY_ANALYZER_MODEL`
+- `GEMINI_BULBAPEDIA_MODEL`
+- `GEMINI_ANSWER_COMPILER_MODEL`
 - `GEMINI_EMBEDDING_MODEL`
 - `GEMINI_EMBEDDING_DIMENSION`
+
+Optional backward-compatible fallback:
+
+- `GEMINI_MODEL`
 
 Optional:
 
@@ -45,8 +51,12 @@ If Supabase is not configured, lore retrieval falls back to the local corpus aut
 
 1. Import the GitHub repository into Vercel.
 2. Add `GEMINI_API_KEY` in the Vercel project environment variables.
-3. Optionally add the Gemini model vars if you want to override the defaults.
-4. Deploy.
+3. Add the per-agent Gemini model vars if you want to override the defaults used in local development:
+   - `GEMINI_QUERY_ANALYZER_MODEL=gemini-2.5-flash-lite`
+   - `GEMINI_BULBAPEDIA_MODEL=gemini-2.5-flash-lite-preview-09-2025`
+   - `GEMINI_ANSWER_COMPILER_MODEL=gemini-2.5-pro`
+4. `GEMINI_MODEL` can still be set as a fallback for older deployments, but the new per-agent vars take priority.
+5. Deploy.
 
 For the current take-home version, Supabase is not required. The app can run entirely on Vercel using the local lore corpus plus live PokeAPI lookups.
 
@@ -55,3 +65,4 @@ For the current take-home version, Supabase is not required. The app can run ent
 - `data/bulbapedia/seed-pages.json` defines the hand-picked lore coverage.
 - `lib/pokedex/knowledge/local-corpus.ts` contains the local fallback lore corpus used by default in the Vercel-only setup.
 - `scripts/ingest-bulbapedia.ts` and `supabase/migrations/001_create_documents.sql` are only needed if you later re-enable vector storage in Supabase.
+- The default model split keeps lightweight classification and retrieval planning on Flash-Lite while reserving `gemini-2.5-pro` for final answer synthesis.

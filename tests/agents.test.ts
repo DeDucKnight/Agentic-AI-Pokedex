@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 
 test("PokeAPIAgent returns not found when no pokemon name is provided", async () => {
   const { runPokeApiAgent } = await import("@/lib/pokedex/agents/pokeapi-agent");
@@ -155,4 +156,25 @@ test("Local Bulbapedia retrieval rejects weak irrelevant prompts", async () => {
   }, { preferLocal: true });
 
   assert.equal(result, null);
+});
+
+test("LLM-backed agents use dedicated Gemini env vars", async () => {
+  const [
+    queryAnalyzerSource,
+    bulbapediaSource,
+    answerCompilerSource
+  ] = await Promise.all([
+    readFile("lib/pokedex/agents/query-analyzer-agent.ts", "utf8"),
+    readFile("lib/pokedex/agents/bulbapedia-agent.ts", "utf8"),
+    readFile("lib/pokedex/agents/answer-compiler-agent.ts", "utf8")
+  ]);
+
+  assert.match(queryAnalyzerSource, /env\.GEMINI_QUERY_ANALYZER_MODEL/);
+  assert.doesNotMatch(queryAnalyzerSource, /env\.GEMINI_MODEL/);
+
+  assert.match(bulbapediaSource, /env\.GEMINI_BULBAPEDIA_MODEL/);
+  assert.doesNotMatch(bulbapediaSource, /env\.GEMINI_MODEL/);
+
+  assert.match(answerCompilerSource, /env\.GEMINI_ANSWER_COMPILER_MODEL/);
+  assert.doesNotMatch(answerCompilerSource, /env\.GEMINI_MODEL/);
 });

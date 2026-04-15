@@ -37,7 +37,7 @@ export async function runQueryAnalyzerAgent(query: string): Promise<QueryAnalysi
 
   try {
     const response = await client.models.generateContent({
-      model: env.GEMINI_MODEL,
+      model: env.GEMINI_QUERY_ANALYZER_MODEL,
       contents: [
         "You are QueryAnalyzerAgent for a Pokemon assistant.",
         "Your task is to understand the user's Pokemon question and return strict JSON only.",

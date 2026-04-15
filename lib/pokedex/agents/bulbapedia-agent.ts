@@ -26,7 +26,7 @@ export async function runBulbapediaAgent(query: string): Promise<BulbapediaAgent
 
   try {
     const response = await client.models.generateContent({
-      model: env.GEMINI_MODEL,
+      model: env.GEMINI_BULBAPEDIA_MODEL,
       contents: [
         "You are BulbapediaAgent for a Pokemon assistant.",
         "Your task is to understand the user's question and produce a retrieval plan for the Bulbapedia corpus.",

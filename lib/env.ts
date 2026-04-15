@@ -49,7 +49,12 @@ const optionalUrl = z.preprocess((value) => {
 
 const envSchema = z.object({
   GEMINI_API_KEY: optionalString,
-  GEMINI_MODEL: z.string().default("gemini-2.5-flash"),
+  GEMINI_MODEL: optionalString,
+  GEMINI_QUERY_ANALYZER_MODEL: z.string().default("gemini-2.5-flash-lite"),
+  GEMINI_BULBAPEDIA_MODEL: z
+    .string()
+    .default("gemini-2.5-flash-lite-preview-09-2025"),
+  GEMINI_ANSWER_COMPILER_MODEL: z.string().default("gemini-2.5-pro"),
   GEMINI_EMBEDDING_MODEL: z.string().default("gemini-embedding-001"),
   GEMINI_EMBEDDING_DIMENSION: z.coerce.number().int().positive().default(1536),
   SUPABASE_URL: optionalUrl,
@@ -60,6 +65,12 @@ const envSchema = z.object({
 export const env = envSchema.parse({
   GEMINI_API_KEY: process.env.GEMINI_API_KEY,
   GEMINI_MODEL: process.env.GEMINI_MODEL,
+  GEMINI_QUERY_ANALYZER_MODEL:
+    process.env.GEMINI_QUERY_ANALYZER_MODEL ?? process.env.GEMINI_MODEL,
+  GEMINI_BULBAPEDIA_MODEL:
+    process.env.GEMINI_BULBAPEDIA_MODEL ?? process.env.GEMINI_MODEL,
+  GEMINI_ANSWER_COMPILER_MODEL:
+    process.env.GEMINI_ANSWER_COMPILER_MODEL ?? process.env.GEMINI_MODEL,
   GEMINI_EMBEDDING_MODEL: process.env.GEMINI_EMBEDDING_MODEL,
   GEMINI_EMBEDDING_DIMENSION: process.env.GEMINI_EMBEDDING_DIMENSION,
   SUPABASE_URL: process.env.SUPABASE_URL,
